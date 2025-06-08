@@ -35,118 +35,150 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result }) => {
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 space-y-6">
-      {/* Overall Result Card */}
-      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
-        <div className="flex flex-col sm:flex-row items-center justify-between">
-          <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-            {result.isFake ? (
-              <AlertTriangle className="h-8 w-8 text-red-400" />
-            ) : (
-              <CheckCircle className="h-8 w-8 text-green-400" />
-            )}
-            <div>
-              <h2 className="text-xl font-semibold text-white">
-                {result.isFake ? 'Deepfake Detected' : 'Authentic Video'}
-              </h2>
-              <p className="text-sm text-gray-400">
-                Confidence: {(result.confidence * 100).toFixed(1)}%
-              </p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Overall Results Header */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-white">Analysis Results</h2>
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-sm text-gray-400">Processing Time</div>
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4 text-cyan-400" />
+                <span className="text-white font-medium">{result.processingTime}s</span>
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Processing Time</p>
-            <p className="text-lg font-semibold text-white">{result.processingTime.toFixed(1)}s</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-white mb-2">
+              {(result.overallScore * 100).toFixed(1)}%
+            </div>
+            <div className="text-sm text-gray-400">Overall Score</div>
+          </div>
+          
+          <div className="text-center">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full border text-sm font-medium ${
+              getClassificationColor(result.classification)
+            }`}>
+              {result.classification === 'REAL' ? (
+                <CheckCircle className="h-4 w-4 mr-1" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 mr-1" />
+              )}
+              {result.classification}
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-white mb-2">
+              {(result.confidence * 100).toFixed(1)}%
+            </div>
+            <div className="text-sm text-gray-400">Confidence</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-cyan-400 mb-2">
+              {result.modelMetrics.computeReduction.toFixed(1)}%
+            </div>
+            <div className="text-sm text-gray-400">Compute Reduction</div>
           </div>
         </div>
       </div>
 
-      {/* Frame Analysis Chart */}
-      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Frame-by-Frame Analysis</h3>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={frameData}>
-              <XAxis dataKey="frame" stroke="#9CA3AF" />
-              <YAxis domain={[0, 100]} stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#fff'
-                }}
-                formatter={(value: number) => [`${value.toFixed(1)}%`, 'Confidence']}
-                labelFormatter={(label) => `Frame ${label}`}
-              />
-              <Bar
-                dataKey="confidence"
-                fill={result.isFake ? '#ef4444' : '#22c55e'}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Frame-by-Frame Analysis */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-4">Frame-by-Frame Confidence</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={frameData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis 
+                  dataKey="frame" 
+                  stroke="#9CA3AF"
+                  fontSize={12}
+                />
+                <YAxis 
+                  stroke="#9CA3AF"
+                  fontSize={12}
+                  domain={[0, 100]}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1F2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#fff'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="confidence" 
+                  stroke="#06B6D4" 
+                  strokeWidth={2}
+                  dot={{ fill: '#06B6D4', strokeWidth: 0, r: 3 }}
+                  name="Overall Confidence"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="pathA" 
+                  stroke="#3B82F6" 
+                  strokeWidth={1}
+                  dot={false}
+                  name="Path A (Original)"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="pathB" 
+                  stroke="#10B981" 
+                  strokeWidth={1}
+                  dot={false}
+                  name="Path B (ASCII)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
 
-      {/* Video Metadata */}
-      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Video Information</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div>
-            <p className="text-sm text-gray-400">Duration</p>
-            <p className="text-lg font-semibold text-white">{result.metadata.videoDuration}s</p>
+        {/* Model Performance */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-4">Model Performance</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={modelMetricsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#9CA3AF"
+                  fontSize={11}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  stroke="#9CA3AF"
+                  fontSize={12}
+                  domain={[0, 100]}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1F2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#fff'
+                  }}
+                />
+                <Bar 
+                  dataKey="score" 
+                  fill="#8B5CF6"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <div>
-            <p className="text-sm text-gray-400">Frames</p>
-            <p className="text-lg font-semibold text-white">{result.metadata.frameCount}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">Resolution</p>
-            <p className="text-lg font-semibold text-white">{result.metadata.resolution}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">Format</p>
-            <p className="text-lg font-semibold text-white">{result.metadata.format}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Model Performance */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h3 className="text-xl font-semibold text-white mb-4">Model Performance</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={modelMetricsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="name" 
-                stroke="#9CA3AF"
-                fontSize={11}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis 
-                stroke="#9CA3AF"
-                fontSize={12}
-                domain={[0, 100]}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1F2937', 
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#fff'
-                }}
-              />
-              <Bar 
-                dataKey="score" 
-                fill="#8B5CF6"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
       </div>
 

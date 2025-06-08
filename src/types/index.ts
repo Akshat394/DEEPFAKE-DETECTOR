@@ -1,18 +1,15 @@
 export interface AnalysisResult {
-  isFake: boolean;
+  videoId: string;
+  filename: string;
+  overallScore: number;
   confidence: number;
+  classification: 'REAL' | 'FAKE' | 'SUSPICIOUS';
   processingTime: number;
-  frameAnalysis: {
-    frameNumber: number;
-    confidence: number;
-    isFake: boolean;
-  }[];
-  metadata: {
-    videoDuration: number;
-    frameCount: number;
-    resolution: string;
-    format: string;
-  };
+  frameAnalysis: FrameAnalysis[];
+  temporalAnomalies: TemporalAnomaly[];
+  modelMetrics: ModelMetrics;
+  asciiPreview: string[];
+  tamperLocalization: TamperRegion[];
 }
 
 export interface FrameAnalysis {
