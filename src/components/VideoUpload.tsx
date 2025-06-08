@@ -71,39 +71,39 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
     <div className="w-full max-w-2xl mx-auto p-4">
       <div
         className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}
-          ${selectedFile ? 'bg-gray-50' : ''}`}
+          ${isDragging ? 'border-cyan-400 bg-cyan-400/10' : 'border-gray-600 hover:border-gray-500'}
+          ${selectedFile ? 'bg-gray-800' : 'bg-gray-800/50'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {selectedFile ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Upload className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-cyan-500/20 rounded-full">
+                  <Upload className="h-5 w-5 text-cyan-400" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">
+                  <p className="text-sm font-medium text-white truncate max-w-[200px] sm:max-w-none">
                     {selectedFile.name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-400">
                     {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedFile(null)}
-                className="p-1 hover:bg-gray-100 rounded-full"
+                className="p-1 hover:bg-gray-600 rounded-full"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-gray-400" />
               </button>
             </div>
             <button
               onClick={handleUpload}
               disabled={isUploading}
-              className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 
+              className="w-full sm:w-auto px-6 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 
                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {isUploading ? (
@@ -119,14 +119,14 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col items-center justify-center space-y-2">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Upload className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-cyan-500/20 rounded-full">
+                <Upload className="h-6 w-6 text-cyan-400" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-white">
                   Drag and drop your video here
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   or click to browse files
                 </p>
               </div>
@@ -140,7 +140,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
             />
             <label
               htmlFor="video-upload"
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 
+              className="inline-block px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 
                 cursor-pointer text-sm font-medium"
             >
               Select Video
@@ -150,10 +150,10 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
       </div>
       
       <div className="mt-4 text-center">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           Supported formats: MP4, AVI, MOV, MKV, WebM
         </p>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-gray-400 mt-1">
           Maximum file size: 500MB
         </p>
       </div>

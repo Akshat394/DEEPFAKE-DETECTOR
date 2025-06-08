@@ -37,39 +37,45 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result }) => {
   return (
     <div className="w-full max-w-4xl mx-auto p-4 space-y-6">
       {/* Overall Result Card */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
         <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center space-x-3 mb-4 sm:mb-0">
             {result.isFake ? (
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-red-400" />
             ) : (
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-green-400" />
             )}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-white">
                 {result.isFake ? 'Deepfake Detected' : 'Authentic Video'}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-400">
                 Confidence: {(result.confidence * 100).toFixed(1)}%
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-500">Processing Time</p>
-            <p className="text-lg font-semibold text-gray-900">{result.processingTime.toFixed(1)}s</p>
+            <p className="text-sm text-gray-400">Processing Time</p>
+            <p className="text-lg font-semibold text-white">{result.processingTime.toFixed(1)}s</p>
           </div>
         </div>
       </div>
 
       {/* Frame Analysis Chart */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Frame-by-Frame Analysis</h3>
+      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Frame-by-Frame Analysis</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={frameData}>
-              <XAxis dataKey="frame" />
-              <YAxis domain={[0, 100]} />
+              <XAxis dataKey="frame" stroke="#9CA3AF" />
+              <YAxis domain={[0, 100]} stroke="#9CA3AF" />
               <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }}
                 formatter={(value: number) => [`${value.toFixed(1)}%`, 'Confidence']}
                 labelFormatter={(label) => `Frame ${label}`}
               />
@@ -84,24 +90,24 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result }) => {
       </div>
 
       {/* Video Metadata */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Video Information</h3>
+      <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Video Information</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
-            <p className="text-sm text-gray-500">Duration</p>
-            <p className="text-lg font-semibold text-gray-900">{result.metadata.videoDuration}s</p>
+            <p className="text-sm text-gray-400">Duration</p>
+            <p className="text-lg font-semibold text-white">{result.metadata.videoDuration}s</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Frames</p>
-            <p className="text-lg font-semibold text-gray-900">{result.metadata.frameCount}</p>
+            <p className="text-sm text-gray-400">Frames</p>
+            <p className="text-lg font-semibold text-white">{result.metadata.frameCount}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Resolution</p>
-            <p className="text-lg font-semibold text-gray-900">{result.metadata.resolution}</p>
+            <p className="text-sm text-gray-400">Resolution</p>
+            <p className="text-lg font-semibold text-white">{result.metadata.resolution}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Format</p>
-            <p className="text-lg font-semibold text-gray-900">{result.metadata.format}</p>
+            <p className="text-sm text-gray-400">Format</p>
+            <p className="text-lg font-semibold text-white">{result.metadata.format}</p>
           </div>
         </div>
       </div>
