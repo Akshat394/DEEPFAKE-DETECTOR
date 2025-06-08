@@ -321,15 +321,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **OpenCV** for computer vision utilities
 - **Netlify** for hosting and deployment
 
-## 📞 Support
-
-For questions, issues, or feature requests:
-
-- 📧 Email: support@deepfakedetector.ai
-- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/issues)
-- 📖 Documentation: [Wiki](https://github.com/your-repo/wiki)
-- 💬 Discussions: [GitHub Discussions](https://github.com/your-repo/discussions)
-
 ---
 
 **Built with ❤️ for AI Security and Digital Trust**
