@@ -1,5 +1,5 @@
-import React from 'react';
-import { Shield, Activity, Upload, Brain } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Activity, Upload, Brain, Menu, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface HeaderProps {
@@ -8,6 +8,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const navItems = [
     { id: 'upload', label: 'Upload & Detect', icon: Upload },
     { id: 'analysis', label: 'Analysis', icon: Brain },
@@ -29,7 +31,15 @@ const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView }) => {
             </div>
           </div>
 
-          <nav className="flex space-x-1">
+          {/* Mobile menu button */}
+          <button
+            className="md:hidden p-2 rounded-md hover:bg-gray-700"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          <nav className="hidden md:flex space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
@@ -70,6 +80,32 @@ const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView }) => {
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 space-y-4 pb-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id as any)}
+                  className={`block text-gray-600 hover:text-gray-900 ${
+                    isActive ? 'font-bold' : ''
+                  }`}
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {item.label}
+                </button>
+              );
+            })}
+            <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+              Get Started
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
