@@ -1,0 +1,27 @@
+seed: 42
+device: cpu
+
+model:
+  pretrained: true
+  feature_dim: 128
+
+training:
+  learning_rate: 0.0001
+  batch_size: 32
+  num_workers: 4
+  epochs: 50
+  early_stopping_patience: 10
+  bce_weight: 1.0
+  temporal_weight: 0.5
+  regularization_weight: 0.01
+  checkpoint_dir: checkpoints
+
+data:
+  target_fps: 8.0
+  sequence_length: 8
+  train_videos: []
+  train_labels: []
+  val_videos: []
+  val_labels: []
+  test_videos: []
+  test_labels: []
