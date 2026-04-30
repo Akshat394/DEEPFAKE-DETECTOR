@@ -12,6 +12,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStage, setProcessingStage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const processingStages = [
     { stage: 'Frame Extraction', description: 'Extracting frames at 30fps using OpenCV' },
@@ -23,69 +24,34 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
     { stage: 'Classification', description: 'Sigmoid classifier with confidence scoring' },
   ];
 
-  const simulateAnalysis = async (file: File) => {
+  const runRealAnalysis = async (file: File) => {
     setIsProcessing(true);
-    
+    setError(null);
+
     for (let i = 0; i < processingStages.length; i++) {
       setProcessingStage(processingStages[i].stage);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 350));
     }
 
-    // Generate mock analysis result
-    const mockResult: AnalysisResult = {
-      videoId: `vid_${Date.now()}`,
-      filename: file.name,
-      overallScore: Math.random() > 0.5 ? 0.95 : 0.12,
-      confidence: 0.92 + Math.random() * 0.07,
-      classification: Math.random() > 0.5 ? 'REAL' : 'FAKE',
-      processingTime: 2.4,
-      frameAnalysis: Array.from({ length: 24 }, (_, i) => ({
-        frameNumber: i + 1,
-        timestamp: i * 0.033,
-        confidence: 0.85 + Math.random() * 0.14,
-        pathAScore: 0.8 + Math.random() * 0.19,
-        pathBScore: 0.75 + Math.random() * 0.24,
-        fusionScore: 0.88 + Math.random() * 0.11,
-        asciiRepresentation: generateMockASCII(),
-        detectedArtifacts: ['compression', 'blending'].slice(0, Math.floor(Math.random() * 2) + 1),
-      })),
-      temporalAnomalies: [
-        {
-          startFrame: 5,
-          endFrame: 8,
-          anomalType: 'blending',
-          severity: 0.7,
-          description: 'Facial blending artifacts detected in eye region',
-        },
-        {
-          startFrame: 15,
-          endFrame: 18,
-          anomalType: 'compression',
-          severity: 0.4,
-          description: 'Compression inconsistencies in mouth area',
-        },
-      ],
-      modelMetrics: {
-        inceptionScore: 0.89,
-        efficientNetScore: 0.94,
-        lstmScore: 0.87,
-        beadalFeatures: 127,
-        computeReduction: 65.3,
-      },
-      asciiPreview: Array.from({ length: 5 }, () => generateMockASCII()),
-      tamperLocalization: [
-        { x: 120, y: 80, width: 60, height: 40, confidence: 0.85, frameNumber: 7 },
-        { x: 130, y: 120, width: 40, height: 30, confidence: 0.72, frameNumber: 16 },
-      ],
-    };
-
-    setIsProcessing(false);
-    onAnalysisComplete(mockResult);
-  };
-
-  const generateMockASCII = () => {
-    const chars = ['█', '▓', '▒', '░', '▄', '▀', '■', '□', '●', '○'];
-    return Array.from({ length: 40 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/detect', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.detail || 'Detection request failed');
+      }
+      const result = (await response.json()) as AnalysisResult;
+      onAnalysisComplete(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to analyze video';
+      setError(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -175,7 +141,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
             </div>
             <div className="flex justify-center space-x-4">
               <button
-                onClick={() => simulateAnalysis(selectedFile)}
+                onClick={() => runRealAnalysis(selectedFile)}
                 disabled={isProcessing}
                 className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors"
               >
@@ -234,6 +200,12 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
             })}
           </div>
         </motion.div>
+      )}
+
+      {error && (
+        <div className="bg-red-500/15 border border-red-500/40 text-red-200 rounded-lg p-4 text-sm">
+          {error}
+        </div>
       )}
     </div>
   );

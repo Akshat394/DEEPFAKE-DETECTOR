@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Clock, Cpu, Eye, FileText } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, CheckCircle, Clock, Eye, FileText } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { AnalysisResult } from '../types';
 
@@ -9,8 +8,6 @@ interface AnalysisDashboardProps {
 }
 
 const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result }) => {
-  const [selectedFrame, setSelectedFrame] = useState(0);
-
   const getClassificationColor = (classification: string) => {
     switch (classification) {
       case 'REAL': return 'text-green-400 bg-green-400/20 border-green-400/30';

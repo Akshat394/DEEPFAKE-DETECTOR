@@ -8,7 +8,11 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView }) => {
-  const navItems = [
+  const navItems: Array<{
+    id: HeaderProps['currentView'];
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
     { id: 'upload', label: 'Upload & Detect', icon: Upload },
     { id: 'analysis', label: 'Analysis', icon: Brain },
     { id: 'monitor', label: 'System Monitor', icon: Activity },
@@ -37,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView }) => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentView(item.id as any)}
+                  onClick={() => setCurrentView(item.id)}
                   className={`relative px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 ${
                     isActive 
                       ? 'bg-cyan-500 text-white' 
