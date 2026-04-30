@@ -1,0 +1,70 @@
+[
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v31.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v27.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v23.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs44.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs45.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs12.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs2.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs51.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v12.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v39.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v19.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs17.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs29.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v13.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v33.mp4",
+    "label": 0
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos/vs18.mp4",
+    "label": 1
+  },
+  {
+    "video_path": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos/v38.mp4",
+    "label": 0
+  }
+]

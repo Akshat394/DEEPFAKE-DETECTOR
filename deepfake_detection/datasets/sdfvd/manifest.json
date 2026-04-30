@@ -1,0 +1,11 @@
+{
+  "dataset": "SDFVD",
+  "source_repo": "bitmind/dataset",
+  "license": "MIT",
+  "real_count": 53,
+  "fake_count": 53,
+  "layout": {
+    "real": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/original_sequences/youtube/c23/videos",
+    "fake": "/home/user/Music/DEEPFAKE-DETECTOR/deepfake_detection/datasets/sdfvd/manipulated_sequences/SDFVD/c23/videos"
+  }
+}
