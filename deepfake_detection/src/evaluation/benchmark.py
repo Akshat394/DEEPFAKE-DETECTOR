@@ -12,17 +12,23 @@ class BenchmarkEvaluator:
     @torch.no_grad()
     def evaluate_on_dataset(self, model, dataset_loader, dataset_name: str):
         model.eval()
-        preds, targets = [], []
+        pred_labels, pred_scores, targets = [], [], []
         device = next(model.parameters()).device
 
         for pixel_input, ascii_input, labels in dataset_loader:
             pixel_input = pixel_input.to(device)
             ascii_input = ascii_input.to(device)
-            scores = model(pixel_input, ascii_input)
-            preds.extend((scores > 0.5).float().cpu().numpy().tolist())
+            logits = model(pixel_input, ascii_input)
+            scores = torch.sigmoid(logits)
+            pred_scores.extend(scores.float().cpu().numpy().tolist())
+            pred_labels.extend((scores > 0.5).float().cpu().numpy().tolist())
             targets.extend(labels.numpy().tolist())
 
-        metrics = compute_all_metrics(np.asarray(preds), np.asarray(targets))
+        metrics = compute_all_metrics(
+            np.asarray(pred_labels),
+            np.asarray(targets),
+            pred_scores=np.asarray(pred_scores),
+        )
         return {"dataset": dataset_name, **metrics}
 
     def cross_dataset_evaluation(self, model, train_dataset: str, test_dataset: str):

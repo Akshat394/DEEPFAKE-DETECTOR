@@ -22,7 +22,11 @@ class ASCIIConverter:
         return int(np.clip(idx, 0, len(self.ascii_chars) - 1))
 
     def convert_frame(self, frame: np.ndarray) -> np.ndarray:
-        gray = self._grayscale(frame)
+        gray = np.asarray(self._grayscale(frame), dtype=np.float32)
+        if gray.ndim != 2:
+            gray = np.squeeze(gray)
+            if gray.ndim != 2:
+                raise ValueError(f"Expected grayscale frame with 2 dims, got shape={gray.shape}")
         gh, gw = self.grid_size
         h, w = gray.shape
 

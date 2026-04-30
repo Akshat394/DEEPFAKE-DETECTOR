@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import os
 from typing import Callable, List, Tuple
 
 import numpy as np
@@ -11,18 +13,38 @@ from src.preprocessing.face_detection import MTCNNFaceDetector
 
 
 class DeepfakeDataset(Dataset):
-    def __init__(self, video_paths: List[str], labels: List[int], transform: Callable = None, sequence_length: int = 8):
+    def __init__(
+        self,
+        video_paths: List[str],
+        labels: List[int],
+        transform: Callable = None,
+        sequence_length: int = 8,
+        cache_dir: str | None = None,
+    ):
         self.video_paths = video_paths
         self.labels = labels
         self.transform = transform
         self.sequence_length = sequence_length
+        self.cache_dir = cache_dir
         self.detector = MTCNNFaceDetector()
         self.converter = ASCIIConverter(grid_size=(80, 40), ascii_chars=".+=@*%#")
+        if self.cache_dir:
+            os.makedirs(self.cache_dir, exist_ok=True)
 
     def __len__(self) -> int:
         return len(self.video_paths)
 
     def load_video_sequence(self, video_path: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.cache_dir:
+            cache_key = hashlib.sha1(f"{video_path}|{self.sequence_length}".encode("utf-8")).hexdigest()  # nosec B324
+            cache_path = os.path.join(self.cache_dir, f"{cache_key}.pt")
+            if os.path.exists(cache_path):
+                try:
+                    cached = torch.load(cache_path, map_location="cpu", weights_only=True)
+                except TypeError:
+                    cached = torch.load(cache_path, map_location="cpu")
+                return cached["pixel_seq"], cached["ascii_seq"]
+
         faces = self.detector.process_video(video_path, fps=8.0)
         if faces is None or faces.shape[0] == 0:
             pixel_seq = torch.zeros(self.sequence_length, 3, 256, 256, dtype=torch.float32)
@@ -34,9 +56,7 @@ class DeepfakeDataset(Dataset):
             pad = self.sequence_length - faces.shape[0]
             faces = torch.cat([faces, faces[-1:].repeat(pad, 1, 1, 1)], dim=0)
 
-        pixel_seq = faces.permute(0, 3, 1, 2).contiguous().float()
-        # faces currently normalized around imagenet stats; bring to 0..1-ish for augmentation path
-        pixel_seq = (pixel_seq - pixel_seq.min()) / (pixel_seq.max() - pixel_seq.min() + 1e-6)
+        pixel_seq = torch.clamp(faces.permute(0, 3, 1, 2).contiguous().float(), 0.0, 1.0)
 
         ascii_frames = []
         for i in range(self.sequence_length):
@@ -45,6 +65,8 @@ class DeepfakeDataset(Dataset):
             ascii_frames.append(torch.from_numpy(ascii_img).permute(2, 0, 1).float() / 255.0)
 
         ascii_seq = torch.stack(ascii_frames, dim=0)
+        if self.cache_dir:
+            torch.save({"pixel_seq": pixel_seq.cpu(), "ascii_seq": ascii_seq.cpu()}, cache_path)
         return pixel_seq, ascii_seq
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, int]:

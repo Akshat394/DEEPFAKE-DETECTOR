@@ -12,12 +12,13 @@ class CompositeLoss(nn.Module):
         self.bce_weight = bce_weight
         self.temporal_weight = temporal_weight
         self.regularization_weight = regularization_weight
-        self.bce = nn.BCELoss()
+        self.bce = nn.BCEWithLogitsLoss()
 
     def bce_loss(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         return self.bce(predictions, targets)
 
-    def temporal_loss(self, predictions: torch.Tensor) -> torch.Tensor:
+    def temporal_loss(self, logits: torch.Tensor) -> torch.Tensor:
+        predictions = torch.sigmoid(logits)
         if predictions.ndim == 2 and predictions.shape[1] > 1:
             return torch.mean(torch.abs(predictions[:, 1:] - predictions[:, :-1]))
         return torch.tensor(0.0, device=predictions.device)
@@ -37,5 +38,6 @@ class CompositeLoss(nn.Module):
     ) -> torch.Tensor:
         bce = self.bce_loss(predictions, targets)
         temporal = self.temporal_loss(temporal_consistency if temporal_consistency is not None else predictions)
-        reg = self.regularization_loss(model_params) if model_params is not None else torch.tensor(0.0, device=predictions.device)
+        # Prefer optimizer weight_decay for L2; keep this term optional and typically near-zero.
+        reg = self.regularization_loss(model_params) if (model_params is not None and self.regularization_weight > 0.0) else torch.tensor(0.0, device=predictions.device)
         return self.bce_weight * bce + self.temporal_weight * temporal + self.regularization_weight * reg

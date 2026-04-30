@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
 
 # Editor directories and files
 .vscode/*
@@ -23,6 +28,16 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.codex
 *.pdf
 *.txt
+!deepfake_detection/requirements.txt
 *.zip
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+deepfake_detection/cache/
+deepfake_detection/checkpoints/
+deepfake_detection/*.egg-info/

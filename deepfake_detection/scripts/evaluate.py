@@ -41,17 +41,28 @@ def main():
     _validate_eval_config(cfg)
     device = torch.device(cfg.get("device", "cpu"))
 
-    test_dataset = DeepfakeDataset(cfg["data"]["test_videos"], cfg["data"]["test_labels"], sequence_length=cfg["data"].get("sequence_length", 8))
-    dummy_dataset = DeepfakeDataset([], [], sequence_length=cfg["data"].get("sequence_length", 8))
+    cache_dir = cfg.get("data", {}).get("cache_dir")
+    test_dataset = DeepfakeDataset(
+        cfg["data"]["test_videos"],
+        cfg["data"]["test_labels"],
+        sequence_length=cfg["data"].get("sequence_length", 8),
+        cache_dir=cache_dir,
+    )
+    dummy_dataset = DeepfakeDataset([], [], sequence_length=cfg["data"].get("sequence_length", 8), cache_dir=cache_dir)
     _, _, test_loader = create_dataloaders(dummy_dataset, dummy_dataset, test_dataset, batch_size=cfg["training"].get("batch_size", 32), num_workers=cfg["training"].get("num_workers", 4))
 
     model = ASCIIHybridDeepfakeDetector(cfg).to(device)
-    ckpt = torch.load(args.checkpoint, map_location=device)
+    try:
+        ckpt = torch.load(args.checkpoint, map_location=device, weights_only=True)
+    except TypeError:
+        ckpt = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(ckpt["model_state_dict"])
 
     evaluator = BenchmarkEvaluator()
     results = evaluator.evaluate_on_dataset(model, test_loader, dataset_name="test")
-    print(results)
+    print("Evaluation results:")
+    for k, v in results.items():
+        print(f"{k}: {v}")
 
 
 if __name__ == "__main__":
