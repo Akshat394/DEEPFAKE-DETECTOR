@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import gc
 import os
 import tempfile
 import time
@@ -8,6 +9,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List
 
+import cv2
 import numpy as np
 import torch
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -29,6 +31,8 @@ from src.utils.config import load_config  # type: ignore
 CONFIG_PATH = DEEPFAKE_ROOT / "configs" / "default.yaml"
 CHECKPOINT_PATH = DEEPFAKE_ROOT / "checkpoints" / "best_model.pt"
 
+_extra_origins = [o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
 app = FastAPI(title="DeepFake Detector API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -37,13 +41,16 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        *_extra_origins,
     ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1):\d+",
+    allow_origin_regex=os.getenv("CORS_ALLOWED_ORIGIN_REGEX", r"https?://(localhost|127\.0\.0\.1):\d+"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+HF_MODEL_ID = "prithivMLmods/Deep-Fake-Detector-v2-Model"
 
 RUNTIME: Dict[str, Any] = {
     "cfg": None,
@@ -51,6 +58,9 @@ RUNTIME: Dict[str, Any] = {
     "model": None,
     "detector": None,
     "converter": None,
+    "mode": None,  # "custom" or "hf"
+    "hf_processor": None,
+    "hf_fake_idx": None,
 }
 
 
@@ -64,25 +74,46 @@ def _load_model_runtime() -> None:
         requested_device = "cpu"
     cfg["device"] = requested_device
     device = torch.device(requested_device)
-    model = ASCIIHybridDeepfakeDetector(cfg).to(device)
-    if not CHECKPOINT_PATH.exists():
-        raise RuntimeError(f"Checkpoint not found: {CHECKPOINT_PATH}")
-    try:
-        ckpt = torch.load(str(CHECKPOINT_PATH), map_location=device, weights_only=True)
-    except TypeError:
-        ckpt = torch.load(str(CHECKPOINT_PATH), map_location=device)
-    model.load_state_dict(ckpt["model_state_dict"], strict=False)
-    model.eval()
+
+    if CHECKPOINT_PATH.exists():
+        model = ASCIIHybridDeepfakeDetector(cfg).to(device)
+        try:
+            ckpt = torch.load(str(CHECKPOINT_PATH), map_location=device, weights_only=True)
+        except TypeError:
+            ckpt = torch.load(str(CHECKPOINT_PATH), map_location=device)
+        model.load_state_dict(ckpt["model_state_dict"], strict=False)
+        model.eval()
+        RUNTIME["mode"] = "custom"
+        RUNTIME["model"] = model
+    else:
+        from transformers import AutoImageProcessor, AutoModelForImageClassification
+
+        processor = AutoImageProcessor.from_pretrained(HF_MODEL_ID)
+        hf_model = AutoModelForImageClassification.from_pretrained(HF_MODEL_ID).to(device)
+        hf_model.eval()
+        # Resolve which class index corresponds to "fake" — labels vary by model.
+        id2label = {int(k): str(v).lower() for k, v in hf_model.config.id2label.items()}
+        fake_idx = next(
+            (i for i, lbl in id2label.items() if any(t in lbl for t in ("fake", "deepfake", "ai", "manipulat"))),
+            1,
+        )
+        RUNTIME["mode"] = "hf"
+        RUNTIME["model"] = hf_model
+        RUNTIME["hf_processor"] = processor
+        RUNTIME["hf_fake_idx"] = fake_idx
+        print(f"[backend] Custom checkpoint missing; using HF model '{HF_MODEL_ID}' (fake_idx={fake_idx}, labels={id2label}).")
+
     RUNTIME["cfg"] = cfg
     RUNTIME["device"] = device
-    RUNTIME["model"] = model
     RUNTIME["detector"] = MTCNNFaceDetector(device=device)
     RUNTIME["converter"] = ASCIIConverter(grid_size=(80, 40), ascii_chars=".+=@*%#")
 
 
 @app.on_event("startup")
 def startup_load():
-    _load_model_runtime()
+    eager = os.getenv("EAGER_LOAD_MODEL", "0").strip() not in {"0", "false", "False", ""}
+    if eager:
+        _load_model_runtime()
 
 
 def _classify(score: float, confidence: float) -> str:
@@ -112,18 +143,51 @@ def _build_ascii_preview(ascii_seq: torch.Tensor, rows: int = 3) -> List[str]:
     return lines
 
 
+MAX_DETECT_FRAMES = int(os.getenv("MAX_DETECT_FRAMES", "12"))
+
+
+def _sample_video_capped(video_path: str, target_fps: float, max_frames: int) -> np.ndarray:
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return np.empty((0,))
+    try:
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        src_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+        if total <= 0:
+            return np.empty((0,))
+        step = max(src_fps / target_fps, 1.0) if src_fps > 0 else 1.0
+        wanted = sorted({int(min(i * step, total - 1)) for i in range(max_frames)})
+        frames: List[np.ndarray] = []
+        for idx in wanted:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+            ok, frame = cap.read()
+            if not ok:
+                continue
+            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        if not frames:
+            return np.empty((0,))
+        return np.stack(frames, axis=0)
+    finally:
+        cap.release()
+
+
 def _run_inference(video_path: str) -> Dict[str, Any]:
     _load_model_runtime()
     cfg = RUNTIME["cfg"]
     device = RUNTIME["device"]
-    model = RUNTIME["model"]
     detector = RUNTIME["detector"]
     converter = RUNTIME["converter"]
 
     seq_len = int(cfg.get("data", {}).get("sequence_length", 8))
     target_fps = float(cfg.get("data", {}).get("target_fps", 8.0))
 
-    faces = detector.process_video(video_path, fps=target_fps)
+    cap_frames = max(seq_len, MAX_DETECT_FRAMES)
+    sampled = _sample_video_capped(video_path, target_fps=target_fps, max_frames=cap_frames)
+    if sampled.size == 0:
+        raise ValueError("Could not read frames from the uploaded video.")
+    frame_tensor = torch.from_numpy(sampled)
+    faces = detector.detect_faces(frame_tensor)
+    del sampled, frame_tensor
     if faces is None or faces.shape[0] == 0:
         raise ValueError("No faces detected in the video.")
 
@@ -141,21 +205,22 @@ def _run_inference(video_path: str) -> Dict[str, Any]:
         ascii_frames.append(torch.from_numpy(ascii_img).permute(2, 0, 1).float() / 255.0)
     ascii_seq = torch.stack(ascii_frames, dim=0)
 
-    with torch.no_grad():
-        logits = model(pixel_seq.unsqueeze(0).to(device), ascii_seq.unsqueeze(0).to(device))
-        score = torch.sigmoid(logits).item()
+    if RUNTIME["mode"] == "custom":
+        per_frame_scores, score = _infer_custom(pixel_seq, ascii_seq, device, seq_len)
+    else:
+        per_frame_scores, score = _infer_hf(pixel_seq, device)
 
-    # Basic frame-level structure for frontend compatibility.
     frame_analysis = []
     for i in range(seq_len):
+        f_score = float(per_frame_scores[i])
         frame_analysis.append(
             {
                 "frameNumber": i + 1,
                 "timestamp": i / max(target_fps, 1.0),
-                "confidence": float(score),
-                "pathAScore": float(score),
-                "pathBScore": float(score),
-                "fusionScore": float(score),
+                "confidence": f_score,
+                "pathAScore": f_score,
+                "pathBScore": f_score,
+                "fusionScore": f_score,
                 "asciiRepresentation": _build_ascii_preview(ascii_seq, rows=1)[0],
                 "detectedArtifacts": [],
             }
@@ -164,7 +229,8 @@ def _run_inference(video_path: str) -> Dict[str, Any]:
     confidence = float(0.5 + abs(score - 0.5) * 1.2)
     confidence = min(max(confidence, 0.0), 1.0)
 
-    return {
+    ascii_preview = _build_ascii_preview(ascii_seq, rows=3)
+    response = {
         "overallScore": float(score),
         "confidence": confidence,
         "classification": _classify(score, confidence),
@@ -177,15 +243,51 @@ def _run_inference(video_path: str) -> Dict[str, Any]:
             "beadalFeatures": 0,
             "computeReduction": 65.0,
         },
-        "asciiPreview": _build_ascii_preview(ascii_seq, rows=3),
+        "asciiPreview": ascii_preview,
         "tamperLocalization": [],
+        "backend": RUNTIME["mode"],
     }
+    del faces, pixel_seq, ascii_seq
+    gc.collect()
+    return response
+
+
+def _infer_custom(pixel_seq: torch.Tensor, ascii_seq: torch.Tensor, device: torch.device, seq_len: int):
+    model = RUNTIME["model"]
+    with torch.no_grad():
+        logits = model(pixel_seq.unsqueeze(0).to(device), ascii_seq.unsqueeze(0).to(device))
+        score = torch.sigmoid(logits).item()
+    return [score] * seq_len, score
+
+
+def _infer_hf(pixel_seq: torch.Tensor, device: torch.device):
+    from PIL import Image
+
+    processor = RUNTIME["hf_processor"]
+    hf_model = RUNTIME["model"]
+    fake_idx = RUNTIME["hf_fake_idx"]
+
+    pil_frames = [
+        Image.fromarray((pixel_seq[i].permute(1, 2, 0).cpu().numpy() * 255.0).astype(np.uint8))
+        for i in range(pixel_seq.shape[0])
+    ]
+    inputs = processor(images=pil_frames, return_tensors="pt").to(device)
+    with torch.no_grad():
+        logits = hf_model(**inputs).logits
+        probs = torch.softmax(logits, dim=-1)[:, fake_idx].cpu().numpy().tolist()
+    overall = float(sum(probs) / len(probs))
+    return probs, overall
 
 
 @app.get("/api/health")
 def health():
     _load_model_runtime()
-    return {"status": "ok", "device": str(RUNTIME["device"]), "checkpoint": str(CHECKPOINT_PATH)}
+    return {
+        "status": "ok",
+        "device": str(RUNTIME["device"]),
+        "mode": RUNTIME["mode"],
+        "checkpoint": str(CHECKPOINT_PATH) if RUNTIME["mode"] == "custom" else HF_MODEL_ID,
+    }
 
 
 @app.post("/api/detect")
@@ -224,4 +326,6 @@ def root():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host=host, port=port)

@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "python3 src/backend/main.py"
+    "server": "deepfake_detection/.venv/bin/python src/backend/main.py"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",

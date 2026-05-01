@@ -36,7 +36,8 @@ const VideoUpload: React.FC<VideoUploadProps> = ({ onAnalysisComplete }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch('/api/detect', {
+      const apiBase = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
+      const response = await fetch(`${apiBase}/api/detect`, {
         method: 'POST',
         body: formData,
       });
