@@ -41,3 +41,6 @@ __pycache__/
 deepfake_detection/cache/
 deepfake_detection/checkpoints/
 deepfake_detection/*.egg-info/
+
+# Nested HF Space clone (separate repo)
+DEEPFAKE_DETECTOR/

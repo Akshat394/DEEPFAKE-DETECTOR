@@ -50,7 +50,7 @@ app.add_middleware(
 )
 
 
-HF_MODEL_ID = "prithivMLmods/Deep-Fake-Detector-v2-Model"
+HF_MODEL_ID = os.getenv("HF_DEEPFAKE_MODEL", "dima806/deepfake_vs_real_image_detection")
 
 RUNTIME: Dict[str, Any] = {
     "cfg": None,
@@ -187,9 +187,16 @@ def _run_inference(video_path: str) -> Dict[str, Any]:
         raise ValueError("Could not read frames from the uploaded video.")
     frame_tensor = torch.from_numpy(sampled)
     faces = detector.detect_faces(frame_tensor)
-    del sampled, frame_tensor
     if faces is None or faces.shape[0] == 0:
-        raise ValueError("No faces detected in the video.")
+        if RUNTIME["mode"] == "custom":
+            raise ValueError("No faces detected in the video.")
+        # HF mode can still classify whole-frame; synthesize a face-shaped tensor
+        # from a center crop so the ASCII preview path keeps working.
+        h, w = sampled.shape[1], sampled.shape[2]
+        side = min(h, w)
+        y0, x0 = (h - side) // 2, (w - side) // 2
+        center = sampled[:, y0 : y0 + side, x0 : x0 + side, :]
+        faces = torch.from_numpy(center).float() / 255.0
 
     faces = faces[:seq_len]
     if faces.shape[0] < seq_len:
@@ -208,7 +215,12 @@ def _run_inference(video_path: str) -> Dict[str, Any]:
     if RUNTIME["mode"] == "custom":
         per_frame_scores, score = _infer_custom(pixel_seq, ascii_seq, device, seq_len)
     else:
-        per_frame_scores, score = _infer_hf(pixel_seq, device)
+        # HF: classify the full sampled frames (not face crops) — the model
+        # was trained on full-image deepfake samples and benefits from
+        # surrounding context like background/edge artifacts.
+        per_frame_scores_full, score = _infer_hf_frames(sampled, device)
+        per_frame_scores = _resample_scores(per_frame_scores_full, seq_len)
+    del sampled, frame_tensor
 
     frame_analysis = []
     for i in range(seq_len):
@@ -260,17 +272,27 @@ def _infer_custom(pixel_seq: torch.Tensor, ascii_seq: torch.Tensor, device: torc
     return [score] * seq_len, score
 
 
-def _infer_hf(pixel_seq: torch.Tensor, device: torch.device):
+def _resample_scores(scores: List[float], target_len: int) -> List[float]:
+    if not scores:
+        return [0.5] * target_len
+    if len(scores) == target_len:
+        return scores
+    out: List[float] = []
+    n = len(scores)
+    for i in range(target_len):
+        idx = min(int(i * n / target_len), n - 1)
+        out.append(scores[idx])
+    return out
+
+
+def _infer_hf_frames(frames_rgb: np.ndarray, device: torch.device):
     from PIL import Image
 
     processor = RUNTIME["hf_processor"]
     hf_model = RUNTIME["model"]
     fake_idx = RUNTIME["hf_fake_idx"]
 
-    pil_frames = [
-        Image.fromarray((pixel_seq[i].permute(1, 2, 0).cpu().numpy() * 255.0).astype(np.uint8))
-        for i in range(pixel_seq.shape[0])
-    ]
+    pil_frames = [Image.fromarray(frames_rgb[i]) for i in range(frames_rgb.shape[0])]
     inputs = processor(images=pil_frames, return_tensors="pt").to(device)
     with torch.no_grad():
         logits = hf_model(**inputs).logits
