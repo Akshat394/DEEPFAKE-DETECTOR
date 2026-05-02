@@ -6,7 +6,7 @@ A production-grade deepfake detection system featuring novel dual-path architect
 
 ## 🚀 Live Demo
 
-**[View Live Application](https://ascii-deepfake-detection.netlify.app)**
+**[View Live Application](https://deepfake-detector-taupe.vercel.app/)**
 
 ## 🏗️ Architecture Overview
 
